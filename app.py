@@ -1,5 +1,6 @@
 import yfinance as yf
 import streamlit as st
+import time
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
@@ -9,7 +10,7 @@ from tensorflow.keras.layers import LSTM, Dense
 st.write("""
 # NVIDIA Stock Price Prediction
 
-This app predicts **the next 10 days of stock prices** using an LSTM model.
+Predict future stock prices using an LSTM model.
 """)
 
 tickerSymbol = 'NVDA'
@@ -31,6 +32,15 @@ with col2:
 
 st.write("## Closing Price Chart")
 st.line_chart(df)
+
+# Animasi loading dengan spinner
+with st.spinner("🔄 Training Model... This may take a while ⏳"):
+    progress_bar = st.progress(0)  # Buat progress bar
+    for percent_complete in range(1, 101):  
+        time.sleep(0.1)  # Simulasi waktu training (bisa disesuaikan)
+        progress_bar.progress(percent_complete)  # Update progress
+    
+    progress_bar.empty()  # Hapus progress bar
 
 # Normalize the data
 scaler = MinMaxScaler(feature_range=(0, 1))
@@ -91,8 +101,10 @@ if test_end > len(test_plot):
 
 test_plot[test_start:test_end, :] = test_predict[:test_end - test_start]
 
-# **Predict the Next 10 Days**
-future_days = 10
+# **User pilih jumlah hari prediksi**
+future_days = st.slider("Select number of days to predict:", min_value=1, max_value=30, value=10)
+
+# **Predict Future Days**
 future_predictions = []
 future_dates = [df.index[-1] + pd.Timedelta(days=i) for i in range(1, future_days + 1)]
 
@@ -117,7 +129,7 @@ combined_df = pd.DataFrame({
     'Test Predict': test_plot[time_step + shift_days:].flatten()
 })
 
-# Add 10-day Future Predictions
+# Add Future Predictions
 future_df = pd.DataFrame({
     'Date': future_dates,
     'Actual': [np.nan] * future_days,
@@ -130,8 +142,11 @@ combined_df = pd.concat([combined_df, future_df])
 combined_df.set_index('Date', inplace=True)
 
 # Display results
-st.write(f"## 🎯 Predicted Closing Prices for the Next 10 Days:")
-st.write(pd.DataFrame({'Date': future_dates, 'Predicted Price': future_predictions}).set_index('Date'))
+st.write(f"## 🎯 Predicted Closing Prices for the Next {future_days} Days (Latest to Earliest):")
+future_df = pd.DataFrame({'Date': future_dates, 'Predicted Price': future_predictions})
+# Balik urutan agar yang terbaru muncul duluan
+future_df = future_df[::-1].set_index('Date')
+st.write(future_df)
 
 # Plot
 st.write("### LSTM Predictions vs Actual Prices")
